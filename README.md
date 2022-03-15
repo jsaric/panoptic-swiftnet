@@ -1,2 +1,3 @@
-# panoptic-swiftnet
+# Panoptic Swiftnet
 Source code to reproduce results from Panoptic Swiftnet paper.
+Coming soon...
