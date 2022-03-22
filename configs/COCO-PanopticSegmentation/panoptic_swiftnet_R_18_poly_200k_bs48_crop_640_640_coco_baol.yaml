@@ -1,0 +1,55 @@
+_BASE_: ../Cityscapes-PanopticSegmentation/Base-PanopticDeepLab-OS16.yaml
+MODEL:
+  META_ARCHITECTURE: "PanopticSwiftNet"
+  PIXEL_MEAN: (0.485, 0.456, 0.406)
+  PIXEL_STD: (0.229, 0.224, 0.225)
+  BACKBONE:
+    NAME: "resnet"
+  RESNETS:
+    DEPTH: 18
+  PANOPTIC_SWIFTNET:
+    STUFF_AREA: 4096
+    NMS_KERNEL: 41
+    SIZE_DIVISIBILITY: 128
+    TOP_K_INSTANCE: 50
+    NUM_CLASSES: 133
+    SEMANTIC_LOSS:
+      TYPE: "hard_pixel_mining"
+      LOSS_TOP_K: 1.0
+    INSTANCE_LOSS:
+      CENTER_LOSS_WEIGHT: 200.0
+      OFFSET_LOSS_WEIGHT: 0.0025
+      BAOL:
+        ENABLED: True
+        WEIGHTS_PATH: "/home/shared/datasets/coco/panoptic_train2017-offset_weightsSR_8_0_4_0_2_0_1_0/"
+    DECODER:
+      TYPE: "SHARED"
+    SYNCBN: True
+  PANOPTIC_DEEPLAB:
+    STUFF_AREA: 4096
+    NMS_KERNEL: 41
+    SIZE_DIVISIBILITY: 128
+    USE_DEPTHWISE_SEPARABLE_CONV: True
+    PREDICT_INSTANCES: False
+DATASETS:
+  TRAIN: ("coco_2017_train_panoptic",)
+  TEST: ("coco_2017_val_panoptic",)
+SOLVER:
+  BASE_LR: 0.0004
+  MAX_ITER: 200000
+  IMS_PER_BATCH: 48
+  AMP:
+    ENABLED: True
+INPUT:
+  FORMAT: "RGB"
+  GAUSSIAN_SIGMA: 8
+  MIN_SIZE_TRAIN: !!python/object/apply:eval ["[int(x * 0.1 * 640) for x in range(5, 16)]"]
+  MIN_SIZE_TRAIN_SAMPLING: "choice"
+  MIN_SIZE_TEST: 640
+  MAX_SIZE_TRAIN: 960
+  MAX_SIZE_TEST: 640
+  CROP:
+    ENABLED: True
+    TYPE: "absolute"
+    SIZE: (640, 640)
+OUTPUT_DIR: "./output/psn-18-coco-bs48/"
