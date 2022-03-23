@@ -1,0 +1,61 @@
+_BASE_: ../Cityscapes-PanopticSegmentation/Base-PanopticDeepLab-OS16.yaml
+MODEL:
+  META_ARCHITECTURE: "PanopticSwiftNet"
+  PIXEL_MEAN: (0.485, 0.456, 0.406)
+  PIXEL_STD: (0.229, 0.224, 0.225)
+  BACKBONE:
+    NAME: "resnet"
+  RESNETS:
+    DEPTH: 18
+  PANOPTIC_SWIFTNET:
+    STUFF_AREA: 4096
+    NMS_KERNEL: 7
+    SIZE_DIVISIBILITY: 128
+    NUM_CLASSES: 65
+    SYNCBN: True
+    SEMANTIC_LOSS:
+      TYPE: "hard_pixel_mining"
+      LOSS_TOP_K: 1.0
+    INSTANCE_LOSS:
+      CENTER_LOSS_WEIGHT: 200.0
+      OFFSET_LOSS_WEIGHT: 0.0025
+      BAOL:
+        ENABLED: True
+        WEIGHTS_PATH: "/home/shared/datasets/mapillary-vistas-official/training/v1.2/offset_weightsSR_8_0_4_0_2_0_1_0/"
+    DECODER:
+      TYPE: "SHARED"
+  PANOPTIC_DEEPLAB:
+    STUFF_AREA: 4096
+    NMS_KERNEL: 7
+    SIZE_DIVISIBILITY: 128
+    PREDICT_INSTANCES: False
+DATASETS:
+  TRAIN: ("mvd_panoptic_train",)
+  TEST: ("mvd_panoptic_val",)
+DATALOADER:
+  SAMPLER_TRAIN: "RepeatFactorTrainingSampler"
+  REPEAT_THRESHOLD: 0.1
+SOLVER:
+  OPTIMIZER: "ADAM"
+  BASE_LR: 0.0005
+  WEIGHT_DECAY: 0.0
+  WEIGHT_DECAY_NORM: 0.0
+  WEIGHT_DECAY_BIAS: 0.0
+  MAX_ITER: 200000
+  LR_SCHEDULER_NAME: "WarmupPolyLR"
+  IMS_PER_BATCH: 16
+  AMP:
+    ENABLED: True
+INPUT:
+  MIN_SIZE_TRAIN: [960, 1024, 1088, 1152, 1216, 1280, 1344, 1408, 1472, 1536, 1600, 1664, 1728, 1792, 1856, 1920, 1984, 2048, 2112]
+  MIN_SIZE_TRAIN_SAMPLING: "choice"
+  MIN_SIZE_TEST: 2048
+  MAX_SIZE_TRAIN: 4096
+  MAX_SIZE_TEST: 2048
+  FORMAT: "RGB"
+  CLASS_BALANCED_CROPS: True
+  CROP:
+    ENABLED: True
+    TYPE: "absolute"
+    SIZE: (1024, 1024)
+OUTPUT_DIR: "./output/mvd-1024-D256-imagenet-baol-rfsampler-cropuniform/"
