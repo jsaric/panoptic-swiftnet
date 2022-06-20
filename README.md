@@ -39,6 +39,14 @@ python train_net.py --config-file path/to/config/file.yaml --num-gpus N
 
 Weights for the boundary aware offset loss need to be precomputed with script `data/save_offset_weights.py`.
 
+## Demo inference on a single image
+
+To visualize model predictions on a single image run:
+
+```
+python demo.py --config-file path/to/config.yaml --input-image path/to/input_image.png MODEL.WEIGHTS path/to/pretrained_model_weights.pth
+```
+
 ## TODO
 - tensorrt
 - time benchmarking
