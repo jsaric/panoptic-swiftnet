@@ -44,7 +44,7 @@ Weights for the boundary aware offset loss need to be precomputed with script `d
 To visualize model predictions on a single image run:
 
 ```
-python demo.py --config-file path/to/config.yaml --input-image path/to/input_image.png MODEL.WEIGHTS path/to/pretrained_model_weights.pth
+python demo.py --config-file path/to/config.yaml --input path/to/image_or_folder --output path/to/output_folder MODEL.WEIGHTS path/to/pretrained_model_weights.pth
 ```
 
 ## TODO
