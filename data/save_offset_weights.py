@@ -1,3 +1,5 @@
+import argparse
+
 import numpy as np
 from PIL import Image
 from glob import glob
@@ -6,6 +8,23 @@ from pathlib import Path
 import os
 from panopticapi.utils import rgb2id
 from multiprocessing import Pool
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Script to create offset weights for the boundary offset loss.')
+    parser.add_argument('--input',
+                        help='Path to the input folder',
+                        required=True)
+    parser.add_argument('--output',
+                        help='Path to the output folder',
+                        default='./offset_weights/',
+                        required=False)
+    parser.add_argument('--ext',
+                        help='Image extension in the input folder. Default: .png',
+                        default='.png',
+                        required=False)
+    args = parser.parse_args()
+    return args
 
 
 class OffsetWeightsTransform:
@@ -52,35 +71,32 @@ class OffsetWeightsTransform:
 
 
 if __name__ == '__main__':
+    args = parse_args()
+    ext = args.ext
+    input_folder = args.input
+    output_folder = args.output
     ext = ".png"
-    # input_folder = "/home/shared/datasets/coco/panoptic_train2017/"
-    input_folder = "/home/shared/datasets/cityscapes/gtFine/cityscapes_panoptic_train/"
-    # input_folder = "/home/jsaric/workspace/detectron2/projects/Panoptic-DeepLab/datasets/mapillary_vistas/training" \
-    #                "/v1.2/panoptic/"
+    workers = 32
     transform = OffsetWeightsTransform(
         ignore_id=0,
         alphas=[8., 4., 2., 1.],
         size_relative=True
     )
-    # output_folder = f"/home/jsaric/workspace/detectron2/projects/Panoptic-DeepLab/datasets/mapillary_vistas" \
-    #                 f"/training" \
-    #                 f"/v1.2/offset_weights{transform.str_transform_code()}/"
-    # output_folder = f"/home/shared/datasets/coco/panoptic_train2017-offset_weights{transform.str_transform_code()}/"
-    output_folder = f"/home/shared/datasets/cityscapes/gtFine/panoptic_train-offset_weight-scaled" \
-                    f"s{transform.str_transform_code()}/"
+    print(f"Creating output folder: {output_folder}")
     os.makedirs(output_folder, exist_ok=True)
 
+    print(f"Finding all files with extension {ext} from the input folder: {input_folder}.")
     paths = list(glob(f"{input_folder}*{ext}"))
-
+    print(f"Found {len(paths)} total labels.")
     def f(path):
         path = Path(path)
         labels = rgb2id(np.array(Image.open(path))).squeeze()
         offset_weights, distances = transform.compute_offset_weight(labels)
-        offset_weights = offset_weights / max(transform.alphas)
         offset_weights = offset_weights.squeeze().astype(np.uint8)
         offset_weights_img = Image.fromarray(offset_weights)
         offset_weights_img.save(f"{output_folder}/{path.name}")
         print(path)
 
-    with Pool(32) as p:
+    print(f"Initializing multiprocessing pool with {workers} workers.")
+    with Pool(workers) as p:
         print(p.map(f, paths))

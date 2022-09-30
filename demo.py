@@ -1,5 +1,5 @@
 import argparse
-
+import glob
 import torch
 import os
 from train_net import setup, Trainer, DetectionCheckpointer
@@ -7,15 +7,18 @@ from detectron2.data import MetadataCatalog
 import detectron2.data.transforms as T
 from PIL import Image
 import numpy as np
-import matplotlib.pyplot as plt
-
+import tqdm
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Demo inference on a single image.')
     parser.add_argument("--config-file", default="", metavar="FILE", help="path to config file")
-    parser.add_argument('--input-image',
-                        help='Path to the input image',
+    parser.add_argument('--input',
+                        help='Path to the input image or folder',
                         required=True)
+    parser.add_argument('--output',
+                        help='Path to the output folder',
+                        default='output-preds',
+                        required=False)
     parser.add_argument(
         "opts",
         help="""
@@ -59,7 +62,6 @@ def panoptic_labels_to_color(label, colormap, label_divisor):
 
 def main(args):
     cfg = setup(args)
-
     dataset_name = cfg.DATASETS.TEST[0]
     meta = MetadataCatalog.get(dataset_name)
     if "coco" in dataset_name or "cityscapes" in dataset_name:
@@ -72,28 +74,31 @@ def main(args):
         cfg.MODEL.WEIGHTS
     )
     model.eval()
-
     transform = T.ResizeShortestEdge(
         cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MAX_SIZE_TEST
     )
-    img_orig = np.array(Image.open(args.input_image))
-    h, w, _ = img_orig.shape
-    img = transform.get_transform(img_orig).apply_image(img_orig)
-    model_input = [{
-        "image": torch.from_numpy(img).permute(2, 0, 1),
-        "width": w,
-        "height": h
-    }]
-    out = model(model_input)[0]
-    preds_color = panoptic_labels_to_color(
-        out["panoptic_seg"][0].squeeze().cpu().numpy(),
-        label_divisor=meta.label_divisor,
-        colormap=colormap
-    )
-    f, axarr = plt.subplots(2, 1)
-    axarr[0].imshow(img_orig)
-    axarr[1].imshow(preds_color)
-    plt.show()
+
+    os.makedirs(args.output, exist_ok=True)
+    if os.path.isfile(args.input):
+        images = [args.input]
+    elif os.path.isdir(args.input):
+        images = glob.glob(args.input + "/*.png") + glob.glob(args.input + "/*.jpg")
+    for img_p in tqdm.tqdm(images):
+        img_orig = np.array(Image.open(img_p))
+        h, w, _ = img_orig.shape
+        img = transform.get_transform(img_orig).apply_image(img_orig)
+        model_input = [{
+            "image": torch.from_numpy(img).permute(2, 0, 1),
+            "width": w,
+            "height": h
+        }]
+        out = model(model_input)[0]
+        preds_color = panoptic_labels_to_color(
+            out["panoptic_seg"][0].squeeze().cpu().numpy(),
+            label_divisor=meta.label_divisor,
+            colormap=colormap
+        )
+        Image.fromarray(preds_color).save(f"{args.output}/{os.path.basename(img_p)}")
 
 
 if __name__ == "__main__":
