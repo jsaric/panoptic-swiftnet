@@ -67,44 +67,6 @@ kernel_paste_instance_and_semantic = '''
     }
 '''
 
-kernel_paste_instance_and_semantic_romb = '''
-    extern "C" __global__ void kernel_paste_instance_and_semantic(
-        const int n, 
-        const long* sem_seg, 
-        const long* ins_seg, 
-        long* pan_seg, 
-        const long* instance_classes, 
-        const int* semseg_areas,
-        const int* thing_list, 
-        const int label_divisor, 
-        const int stuff_area,
-        const int h,
-        const int w
-    ){
-        for (int intIndex = (blockIdx.x * blockDim.x) + threadIdx.x; intIndex < n; intIndex += blockDim.x * gridDim.x) {
-            const int i = ( intIndex / w) % h;
-            const int j = intIndex % w;
-            const int ins_id = ins_seg[i * w + j];
-            const int sem_class = sem_seg[i * w + j];
-            const int ins_class = instance_classes[ins_id];
-            if(ins_id > 0 && thing_list[sem_class] == 1) {
-                if(sem_class == 2 && (ins_class == 3 || ins_class == 4)) {
-                    pan_seg[i * w + j] = sem_class * label_divisor + ins_id;
-                }
-                else if(ins_class == 2 && (sem_class == 3 || sem_class == 4)) {
-                    pan_seg[i * w + j] = sem_class * label_divisor + ins_id;
-                }
-                else {
-                    pan_seg[i * w + j] = ins_class * label_divisor + ins_id;
-                }
-            }
-            else if(ins_id == 0 && thing_list[sem_class] == 0 && semseg_areas[sem_class] >= stuff_area) {
-                pan_seg[i * w + j] = sem_class * label_divisor;
-            }
-        }
-    }
-'''
-
 class _FunctionCountInstanceClassesAndStuffArea(torch.autograd.Function):
     @staticmethod
     def backward(ctx: Any, *grad_outputs: Any) -> Any:
@@ -154,11 +116,11 @@ class _FunctionPasteInstanceAndSemantic(torch.autograd.Function):
 
         if sem_seg.is_cuda:
             n = sem_seg.nelement()
-            # cupy_launch('kernel_paste_instance_and_semantic', kernel_paste_instance_and_semantic)(
-            cupy_launch('kernel_paste_instance_and_semantic', kernel_paste_instance_and_semantic_romb)(
+            cupy_launch('kernel_paste_instance_and_semantic', kernel_paste_instance_and_semantic)(
                 grid=tuple([int((n + 512 - 1) / 512)]),
                 block=tuple([512]),
-                args=[n, sem_seg.data_ptr(), ins_seg.data_ptr(), pan_seg.data_ptr(), ins_classes.data_ptr(),
+                args=[n, sem_seg.data_ptr(), ins_seg.data_ptr(), pan_seg.data_ptr(), ins_classes.
+                      data_ptr(),
                       semseg_areas.data_ptr(), is_thing_arr.data_ptr(), label_divisor, stuff_area, ss_h, ss_w]
             )
         else:
